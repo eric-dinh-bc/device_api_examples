@@ -1,0 +1,41 @@
+#!/bin/bash
+# gettbrsettings - uses curl commands and some simple parsing to retrieve settings from a ThreatBlockr 2.0 device and stores the JSON results in a filename as specified as the lone parameter on the command line
+# verify output file parameter
+useOutputFile="$1"
+if [ "$useOutputFile" == "" ]
+then
+    echo
+    echo "Usage: $0 [output file]"
+    echo
+    echo "This tool uses curl commands and some simple parsing to retrieve settings from a ThreatBlockr 2.0 device and stores the JSON results in a filename as specified as the lone parameter on the command line."
+    echo
+    echo "The output file parameter is required."
+    echo
+    exit 1
+fi
+echo
+echo "ThreatBlockr 2.0 Settings Retrieval Script started at: $(date)"
+# note: assumes 'tbr' is in /etc/hosts
+tbrIp=tbr
+tbrUser=admin
+tbrPass=admin
+# login and get auth bearer
+echo
+echo "Logging in to get an authorization bearer token ..."
+authBearer="$(curl -H "Content-Type: application/json" -d "{\"username\":\"$tbrUser\",\"password\":\"$tbrPass\",\"agree\":\"false\"}" --insecure -X POST "https://$tbrIp/api/v1/auth/login" 2>/dev/null | cut -d ':' -f2 | cut -d ',' -f 1 | cut -d '"' -f2)"
+echo "$authBearer"
+# get settings
+echo
+echo "Retrieving ThreatBlockr 2.0 settings ..."
+curl --output $useOutputFile --insecure --silent -G "https://$tbrIp/api/v1/config/export" -H "Authorization: Bearer $authBearer" 2>/dev/null
+# show settings
+echo
+echo "Retrieved ThreatBlockr 2.0 settings are in your requested output file: $useOutputFile"
+# logout
+echo
+echo "Logging out ..."
+curl --insecure -H "Accept: application/json" -H "Authorization: Bearer $authBearer" -X POST "https://$tbrIp/api/v1/auth/logout"
+echo
+echo "ThreatBlockr 2.0 Settings Retrieval Script finished at: $(date)"
+echo
+exit 0
